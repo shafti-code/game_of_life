@@ -17,12 +17,13 @@ int* curr;
 int* next;
 
 void clean_exit(int signum){
+    endwin();
     free(next);   
     free(curr);
     free(dead_to_check.indexes);
     char goodbye[] = "exiting with the pointers freed";
     write(1,goodbye,sizeof(goodbye) - 1);
-    _exit(1);
+    _exit(0);
 }
 
 void draw_game(){
@@ -38,7 +39,16 @@ void draw_game(){
     }
 }
 
-int find_neighbours(int y, int x){
+int is_already_tagged(int index){
+    for (int i = 0; i < dead_to_check.size; i++){
+        if (index == dead_to_check.indexes[i]){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int find_neighbours(int y, int x, int append_dead){
     int neighbours = 0;
 
     int dy[8] = { -1, -1, -1,  0, 0,  1, 1, 1 };
@@ -50,26 +60,23 @@ int find_neighbours(int y, int x){
 
         if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
             int index = ny * width + nx;
-
             if (curr[index] == 1) {
                 neighbours++;
-            } else if (curr[index] == 0) {
-                for (int i = 0; i < dead_to_check.size; i++){
-                    if (index != dead_to_check.indexes[i]){
-                        if (dead_to_check.size != dead_to_check.capacity){
-                            dead_to_check.indexes[dead_to_check.size] = index;
-                            dead_to_check.size++;
-                        } else {
-                            dead_to_check.capacity += 16;
-                            dead_to_check.indexes = realloc(dead_to_check.indexes, dead_to_check.capacity * sizeof(int));
-                            if (dead_to_check.indexes == NULL){
-                                char err_msg[] = "failed to allocate mem\n";
-                                write(2, err_msg, sizeof(err_msg));
-                                return -1;
-                            }
-                            dead_to_check.indexes[dead_to_check.size] = index;
-                            dead_to_check.size++;
+            } else if (curr[index] == 0 && append_dead == 1) {
+                if (!is_already_tagged(index)){
+                    if (dead_to_check.size != dead_to_check.capacity){
+                        dead_to_check.indexes[dead_to_check.size] = index;
+                        dead_to_check.size++;
+                    } else {
+                        dead_to_check.capacity += 16;
+                        dead_to_check.indexes = realloc(dead_to_check.indexes, dead_to_check.capacity * sizeof(int));
+                        if (dead_to_check.indexes == NULL){
+                            char err_msg[] = "failed to allocate mem\n";
+                            write(2, err_msg, sizeof(err_msg));
+                            return -1;
                         }
+                        dead_to_check.indexes[dead_to_check.size] = index;
+                        dead_to_check.size++;
                     }
                 }
             }
@@ -85,12 +92,12 @@ void process_board(){
     for (int y = 0; y < height; y++){
         for (int x = 0; x < width; x++){
             if (curr[width * y + x] == 1){
-                int ngbrs = find_neighbours(y,x);
-                if (ngbrs > 1 && ngbrs < 4) {
+                int ngbrs = find_neighbours(y,x,1);
+                if (ngbrs >= 2 && ngbrs <= 3) {
                     next[width * y + x] = 1;
                 } else if (ngbrs < 2) {
                     next[width * y + x] = 0;
-                } else if (ngbrs > 3) {
+                } else if (ngbrs >= 4) {
                     next[width * y + x] = 0;
                 }
             }
@@ -100,7 +107,7 @@ void process_board(){
         int y,x;
         y = dead_to_check.indexes[i] / width;
         x = dead_to_check.indexes[i] % width;
-        int ngbrs = find_neighbours(y,x);
+        int ngbrs = find_neighbours(y,x,0);
         if (ngbrs == 3){
             next[width * y + x] = 1;
         }
@@ -113,6 +120,13 @@ void process_board(){
     dead_to_check.size = 0;
 }
 
+void pre_sim(){
+    //TODO: finish the code for player drawing the board before starting sim
+    // mousemask(ALL_MOUSE_EVENTS, NULL);
+    // char press = getch();
+    // if(press == KEY_MOUSE)
+}
+
 int main(int argc, char *argv[])
 {
     dead_to_check.size = 0;
@@ -122,6 +136,7 @@ int main(int argc, char *argv[])
     setlocale(LC_ALL, "");
     initscr();
     getmaxyx(stdscr,height,width);
+    // mousemask();
     width /=2;
     curr = malloc((height * width) * sizeof(int));
     next = malloc((height * width) * sizeof(int));
@@ -141,11 +156,9 @@ int main(int argc, char *argv[])
     }
     curr[(5 * width) + 5] = 1;
     curr[(6 * width) + 6] = 1;
-    curr[(6 * width) + 7] = 1;
-    curr[(4 * width) + 7] = 1;
-    curr[(4 * width) + 6] = 1;
-    curr[(5 * width) + 8] = 1;
-    curr[(5 * width) + 7] = 1;
+    curr[(7 * width) + 6] = 1;
+    curr[(7 * width) + 5] = 1;
+    curr[(7 * width) + 4] = 1;
     while (1){
         draw_game();
         move(height,width);
