@@ -27,7 +27,6 @@ void clean_exit(int signum){
 }
 
 void draw_game(){
-    clear();
     for (int i = 0; i < height; i++){
         for (int j = 0; j < width; j++){
             if (curr[(i * width) + j]== 0){
@@ -36,7 +35,9 @@ void draw_game(){
                 printw("██");
             }
         }
+        move(i+1,0);
     }
+    refresh();
 }
 
 int is_already_tagged(int index){
@@ -68,7 +69,7 @@ int find_neighbours(int y, int x, int append_dead){
                         dead_to_check.indexes[dead_to_check.size] = index;
                         dead_to_check.size++;
                     } else {
-                        dead_to_check.capacity += 16;
+                        dead_to_check.capacity += 8;
                         dead_to_check.indexes = realloc(dead_to_check.indexes, dead_to_check.capacity * sizeof(int));
                         if (dead_to_check.indexes == NULL){
                             char err_msg[] = "failed to allocate mem\n";
@@ -121,10 +122,24 @@ void process_board(){
 }
 
 void pre_sim(){
-    //TODO: finish the code for player drawing the board before starting sim
-    // mousemask(ALL_MOUSE_EVENTS, NULL);
-    // char press = getch();
-    // if(press == KEY_MOUSE)
+    mousemask(ALL_MOUSE_EVENTS, NULL);
+
+    MEVENT event;
+    int finished = 0;
+
+    while(!finished){
+        int press = getch();
+        if (press == KEY_MOUSE){
+            if(getmouse(&event) == OK){
+                if(event.bstate & BUTTON1_CLICKED){
+                    curr[width * event.y + (event.x/2)] = 1;
+                    draw_game();
+                } 
+            }
+        } else if (press == 32){
+            finished = 1;
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -135,8 +150,8 @@ int main(int argc, char *argv[])
     signal(SIGINT,clean_exit);
     setlocale(LC_ALL, "");
     initscr();
+    keypad(stdscr,true);
     getmaxyx(stdscr,height,width);
-    // mousemask();
     width /=2;
     curr = malloc((height * width) * sizeof(int));
     next = malloc((height * width) * sizeof(int));
@@ -154,17 +169,21 @@ int main(int argc, char *argv[])
             curr[(y * width) + x] = 0;
         }
     }
-    curr[(5 * width) + 5] = 1;
-    curr[(6 * width) + 6] = 1;
-    curr[(7 * width) + 6] = 1;
-    curr[(7 * width) + 5] = 1;
-    curr[(7 * width) + 4] = 1;
+    // curr[(5 * width) + 5] = 1;
+    // curr[(6 * width) + 6] = 1;
+    // curr[(7 * width) + 6] = 1;
+    // curr[(7 * width) + 5] = 1;
+    // curr[(7 * width) + 4] = 1;
+
+    draw_game();
+
+    pre_sim();
+    
     while (1){
+        clear();
         draw_game();
-        move(height,width);
-        refresh();
         process_board();
-        usleep(1000000);
+        usleep(100000);
     }
     endwin();
 
