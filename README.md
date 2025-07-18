@@ -1,4 +1,4 @@
-### very basic dumb and in all things considered inoptimal implementation of conways game of life
+### very basic dumb and in all things considered sub-optimal implementation of Conway's game of life
 run with 
 ```bash
 make
@@ -12,4 +12,4 @@ make
 - c standard lib
 
 ### unimportant info
-supplied main executable file is compiled for arm64 platform
+supplied main executable file is compiled for arm64 platforms
