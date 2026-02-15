@@ -1,8 +1,10 @@
 #include "ncurses.h"
-#include "stdlib.h"
-#include "unistd.h"
-#include "signal.h"
-#include "locale.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <locale.h>
+#include <stdbool.h>
+#include <time.h>
 
 typedef struct {
     int capacity;
@@ -15,6 +17,8 @@ GrowingArray dead_to_check;
 int height,width;
 int* curr;
 int* next;
+
+void seed();
 
 void clean_exit(int signum){
     endwin();
@@ -30,7 +34,7 @@ void draw_game(){
     for (int i = 0; i < height; i++){
         for (int j = 0; j < width; j++){
             if (curr[(i * width) + j]== 0){
-                printw("··");
+                printw("  ");
             } else {
                 printw("██");
             }
@@ -39,6 +43,7 @@ void draw_game(){
     }
     refresh();
 }
+
 
 int is_already_tagged(int index){
     for (int i = 0; i < dead_to_check.size; i++){
@@ -121,6 +126,26 @@ void process_board(){
     dead_to_check.size = 0;
 }
 
+
+int repeats = 0;
+
+void count_cells(){
+    static int last_cells = 0;
+    int cells = 0;
+    for (int i = 0; i < height; i++){
+        for (int j = 0;j < width; j++){
+            if (curr[i * width + j] == 1){
+                cells++;
+            }
+        }
+    }
+    if (cells == last_cells){
+        repeats++;
+    } else {
+        last_cells = cells;
+    }
+}
+
 void pre_sim(){
     mousemask(ALL_MOUSE_EVENTS, NULL);
 
@@ -134,7 +159,7 @@ void pre_sim(){
                 if(event.bstate & BUTTON1_CLICKED){
                     curr[width * event.y + (event.x/2)] = 1;
                     draw_game();
-                } 
+                }
             }
         } else if (press == 32){
             finished = 1;
@@ -142,9 +167,43 @@ void pre_sim(){
     }
 }
 
+void seed(){
+    srand(time(NULL));
+    for (int i = 0; i < height; i++){
+        for (int j = 0; j < width; j++){
+            curr[i * width + j] = 0;
+            next[i * width + j] = 0;
+        }
+    }
+    for (int i = 0; i < height; i++){
+        for (int j = 0; j < width; j++){
+            curr[i * width + j] = rand() % 2;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    dead_to_check.size = 0;
+    bool random = false;
+    bool restart = false;
+    char c;
+    for (int i = 0; i < argc; i++){
+        c = getopt(argc,argv,"srh");
+        switch(c) {
+            case 'r':
+                restart = true;
+                break;
+            case 's':
+                random = true;
+                break;
+            case 'h':
+                printf("simple game of life\n");
+                printf("-r\t\tseed the board randomly\n");
+                printf("-h\t\tshow this help\n");
+                break;
+        }
+    }
+    dead_to_check.size     = 0;
     dead_to_check.capacity = 4;
     dead_to_check.indexes = malloc(dead_to_check.capacity * sizeof(int));
     signal(SIGINT,clean_exit);
@@ -177,12 +236,22 @@ int main(int argc, char *argv[])
 
     draw_game();
 
-    pre_sim();
-    
+    if (!random){
+        pre_sim();
+    } else {
+        seed();
+    }
     while (1){
         clear();
         draw_game();
         process_board();
+        if(restart){
+            count_cells();
+            if (repeats > 40){
+                seed();
+                repeats = 0;
+            }
+        }
         usleep(100000);
     }
     endwin();

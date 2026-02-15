@@ -3,6 +3,10 @@ run with
 ```bash
 make
 ```
+### brand new commands
+
+-r      reseed the simulation if it gets stale
+-s      seed the board randomly
 
 ### technologies used
 - c lang
