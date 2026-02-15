@@ -6,8 +6,8 @@ make
 ### brand new commands
 
 ```
--r\treseed the simulation if it gets stale
--s\tseed the board randomly
+-r  reseed the simulation if it gets stale
+-s  seed the board randomly
 ```
 
 ### technologies used
